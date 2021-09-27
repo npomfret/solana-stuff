@@ -8,6 +8,7 @@ Just a handy list of solana resources...
  * [solsea](https://solsea.io/)
  * [star atlas](https://play.staratlas.com/market)
  * [magiceden](https://magiceden.io/)
+ * @exchgART
 
 ## NFT market data
 
