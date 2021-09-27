@@ -1,4 +1,4 @@
-# resources
+Just a handy list of solana resources... 
 
 ## NFT markets
 
