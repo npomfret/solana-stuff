@@ -42,3 +42,9 @@ Just a handy list of solana resources...
 
  * [raydium](https://raydium.io/pools/)
  * [orca](https://www.orca.so/pools)
+
+## Developer resources
+
+ * [metaplex guide](https://www.notion.so/Metaplex-Developer-Guide-afefbc19841744c28587ab948a08cfac)
+ * [sol token list](https://github.com/solana-labs/token-list/blob/main/src/tokens/solana.tokenlist.json)
+ * [smb market place blockchian query](https://github.com/boxwooddev/smb-marketplace-history)
