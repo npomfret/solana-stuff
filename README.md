@@ -21,9 +21,12 @@
  * [params.art](https://params.art/)
  * [paragonart](https://paragonart.holaplex.com/#/)
 
-## NFT projects
+## NFT collectables
  
-* [cryptocubs](https://www.cryptocubs.io/)
+ * [cryptocubs](https://www.cryptocubs.io/)
+ * [soliens](https://www.soliens.space/#/)
+ * [boldbadgers](https://boldbadgers.com/)
+ * [sollamas](https://sollamas.com/)
 
 ## NFT Viewers
 
