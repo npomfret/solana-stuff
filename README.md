@@ -23,6 +23,7 @@ Just a handy list of solana resources...
 
 ## NFT collectables
  
+ * [the sneks](https://sneks.gg/roadmap)
  * [cryptocubs](https://www.cryptocubs.io/)
  * [soliens](https://www.soliens.space/#/)
  * [boldbadgers](https://boldbadgers.com/)
