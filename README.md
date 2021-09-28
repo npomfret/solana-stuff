@@ -45,6 +45,7 @@ Just a handy list of solana resources...
 
  * [raydium](https://raydium.io/pools/)
  * [orca](https://www.orca.so/pools)
+ * [marinade.finance](https://marinade.finance) (staking)
 
 ## Developer resources
 
