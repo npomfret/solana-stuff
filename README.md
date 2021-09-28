@@ -6,7 +6,7 @@ Just a handy list of solana resources...
  * [solana monkey business](https://market.solanamonkey.business/)
  * [digital eyes](https://digitaleyes.market)
  * [solsea](https://solsea.io/)
- * [star atlas](https://play.staratlas.com/market) - [brochure](https://staratlas.com/gao-brochure.pdf)
+ * [star atlas](https://play.staratlas.com/market) - [brochure](https://staratlas.com/gao-brochure.pdf) - [metadata](https://galaxy.staratlas.com/nfts)
  * [magiceden](https://magiceden.io/)
  * @exchgART
 
@@ -21,6 +21,7 @@ Just a handy list of solana resources...
  * [EnigmaExpanses](https://expanses.ai/#/)
  * [params.art](https://params.art/)
  * [paragonart](https://paragonart.holaplex.com/#/)
+ * [lobster shack](https://lobstershack.holaplex.com/#/)
 
 ## NFT collectables
  
@@ -39,13 +40,15 @@ Just a handy list of solana resources...
 ## Portfolio Viewers
 
  * [step.finance](https://app.step.finance/#/dashboard)
+ * [sonar.watch](https://sonar.watch/dashboard)
  * [apeboard.finance](https://apeboard.finance/dashboard)
 
 ## DEXs
 
  * [raydium](https://raydium.io/pools/)
- * [orca](https://www.orca.so/pools)
+ * [orca](https://www.orca.so/pools) - [the team](https://orca-so.medium.com/meet-the-orca-team-1b116398db48)
  * [marinade.finance](https://marinade.finance) (staking)
+ * [saber](https://app.saber.so/#/farms)
 
 ## Developer resources
 
