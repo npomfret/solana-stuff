@@ -29,6 +29,7 @@ Just a handy list of solana resources...
  * [soliens](https://www.soliens.space/#/)
  * [boldbadgers](https://boldbadgers.com/)
  * [sollamas](https://sollamas.com/)
+ * [solmushies](https://www.solmushies.io/trait)
 
 ## NFT Viewers
 
