@@ -6,7 +6,7 @@ Just a handy list of solana resources...
  * [solana monkey business](https://market.solanamonkey.business/)
  * [digital eyes](https://digitaleyes.market)
  * [solsea](https://solsea.io/)
- * [star atlas](https://play.staratlas.com/market)
+ * [star atlas](https://play.staratlas.com/market) [brochure](https://staratlas.com/gao-brochure.pdf)
  * [magiceden](https://magiceden.io/)
  * @exchgART
 
