@@ -32,6 +32,12 @@ Just a handy list of solana resources...
  * [sollamas](https://sollamas.com/)
  * [solmushies](https://www.solmushies.io/trait)
 
+## Solana wallets
+
+ * Phantom
+ * SolFlare
+ * Sollet
+
 ## NFT Viewers
 
  * [nfteyez](https://www.nfteyez.global/accounts/8uqTTJrymHMCoG4KLGLPgJh8rqHhMWSEX5BtyL6zdPZL)
