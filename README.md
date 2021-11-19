@@ -50,3 +50,4 @@ Just a handy list of solana resources...
  * [metaplex guide](https://www.notion.so/Metaplex-Developer-Guide-afefbc19841744c28587ab948a08cfac)
  * [sol token list](https://github.com/solana-labs/token-list/blob/main/src/tokens/solana.tokenlist.json)
  * [smb market place blockchian query](https://github.com/boxwooddev/smb-marketplace-history)
+ * [account snippet](https://gist.github.com/beautyfree/8d6d6bd80e4dc81911cffca946b14641)
