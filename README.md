@@ -64,3 +64,5 @@ Just a handy list of solana resources...
  * [smb market place blockchian query](https://github.com/boxwooddev/smb-marketplace-history)
  * [serum](https://github.com/project-serum/serum-ts)
  * [account snippet](https://gist.github.com/beautyfree/8d6d6bd80e4dc81911cffca946b14641)
+ * [solana-nft-sales-tracker](https://github.com/flutternft/solana-nft-sales-tracker/tree/main/src)
+ * [nft-get](https://github.com/vicyyn/MetaplexMetadata-js)
