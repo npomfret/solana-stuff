@@ -71,5 +71,6 @@ Just a handy list of solana resources...
  * [metaplex helper code](https://github.com/solana-labs/solana/tree/1428575be3bb71dc015184b63261609890dd695d/explorer/src/metaplex)
  * [sol sniper](https://github.com/kcotoi/SOLSniperNFT-Releases)
  * [sol mint list](https://github.com/statikdev/sol-mint-list)
+ * [nft bot](https://github.com/milktoastlab/SolanaNFTBot)
  * [monkeydao nft observer](https://github.com/MonkeDAO/observer)
  * [bonfida name service resolver](https://github.com/billenburger/sns-resolv[r)
