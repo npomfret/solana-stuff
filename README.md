@@ -10,7 +10,6 @@ Just a handy list of solana resources...
  * [alpha.art](https://alpha.art/#popular)
  * [star atlas](https://play.staratlas.com/market) - [brochure](https://staratlas.com/gao-brochure.pdf) - [metadata](https://galaxy.staratlas.com/nfts)
  * [magiceden](https://magiceden.io/)
- * @exchgART
 
 ## NFT market data
 
@@ -68,3 +67,9 @@ Just a handy list of solana resources...
  * [account snippet](https://gist.github.com/beautyfree/8d6d6bd80e4dc81911cffca946b14641)
  * [solana-nft-sales-tracker](https://github.com/flutternft/solana-nft-sales-tracker/tree/main/src)
  * [nft-get](https://github.com/vicyyn/MetaplexMetadata-js)
+ * [sales tracker](https://github.com/flutternft/solana-nft-sales-tracker)
+ * [metaplex helper code](https://github.com/solana-labs/solana/tree/1428575be3bb71dc015184b63261609890dd695d/explorer/src/metaplex)
+ * [sol sniper](https://github.com/kcotoi/SOLSniperNFT-Releases)
+ * [sol mint list](https://github.com/statikdev/sol-mint-list)
+ * [monkeydao nft observer](https://github.com/MonkeDAO/observer)
+ * [bonfida name service resolver](https://github.com/billenburger/sns-resolv[r)
