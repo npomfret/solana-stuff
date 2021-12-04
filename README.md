@@ -16,6 +16,7 @@ Just a handy list of solana resources...
  * [solanalysis](https://solanalysis.com/)
  * [howrare](https://howrare.is/boldbadgers/6138/)
  * [moonrank](https://moonrank.app/collection/sneks)
+ * [solanafloor](https://solanafloor.com)
 
 ## NFT artists
 
@@ -74,3 +75,4 @@ Just a handy list of solana resources...
  * [nft bot](https://github.com/milktoastlab/SolanaNFTBot)
  * [monkeydao nft observer](https://github.com/MonkeDAO/observer)
  * [bonfida name service resolver](https://github.com/billenburger/sns-resolv[r)
+ * [rarity calcs](https://medium.com/yakuzacatssociety/ycs-rarity-explanation-ddbc94b60f67)
