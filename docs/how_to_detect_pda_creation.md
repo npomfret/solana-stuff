@@ -179,7 +179,3 @@ export async function detectPdaCreations(
 - [Solana Docs — Account Lifecycle](https://docs.solana.com/developing/programming-model/accounts#account-lifecycle)
 - [Solana Cookbook — getSignaturesForAddress](https://solanacookbook.com/references/transactions.html#getsig)
 - [PDA Derivation Patterns Reference](./Solana%20Pda%20Derivation%20Patterns%20Extended)
-
----
-
-**End of File.**
