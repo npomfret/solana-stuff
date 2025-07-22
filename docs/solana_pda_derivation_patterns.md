@@ -29,8 +29,8 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const derivePda = (
-  seeds: (Buffer | Uint8Array)[],
-  programId: PublicKey,
+    seeds: (Buffer | Uint8Array)[],
+    programId: PublicKey,
 ): [PublicKey, number] => PublicKey.findProgramAddressSync(seeds, programId);
 ```
 
@@ -56,11 +56,11 @@ These PDAs encode a user’s `Pubkey` directly (sometimes plus extra context).
 
 | Sub‑Pattern             | Seed Recipe               | Typical Use‑Case                | Notable Protocols                |
 | ----------------------- | ------------------------- | ------------------------------- | -------------------------------- |
-| **A1 — Classic**        | `[b"user", user]`         | One profile per user            | Clone, Vaultka, Grass            |
-| **A2 — User + State**   | `[state, b"voter", user]` | Per‑market/realm positions      | Helium DAO, 01 Protocol, Phoenix |
-| **A3 — User + Token**   | `[b"stake", mint, user]`  | Multi‑token staking or deposits | Allbridge, Nosana                |
-| **A4 — User + Counter** | `[b"user", user, u16LE]`  | Multi‑account (sub‑accounts)    | Drift, Zeta                      |
-| **A5 — Franken‑Seeds**  | Any mix of the above      | Complex DeFi / LP positions     | Parcl, Kamino                    |
+| **A1 — Classic**        | `[b"user", user]`         | One profile per user            | Clone, Vaultka, Grass, Zelo, Lulo, Aurory |
+| **A2 — User + State**   | `[state, b"voter", user]` | Per‑market/realm positions      | Helium DAO, 01 Protocol, Phoenix, Marinade, Jupiter, Hawksight, Magic Eden, Star Atlas |
+| **A3 — User + Token**   | `[b"stake", mint, user]`  | Multi‑token staking or deposits | Allbridge, Nosana, Flash |
+| **A4 — User + Counter** | `[b"user", user, u16LE]`  | Multi‑account (sub‑accounts)    | Drift, Zeta, Parcl |
+| **A5 — Franken‑Seeds**  | Any mix of the above      | Complex DeFi / LP positions     | Parcl, Kamino, Francium, Save |
 
 > **Tip – Little‑Endian Counters**  Use a fixed‑width `BN` when serialising counters so the seed length never changes.
 
@@ -83,7 +83,7 @@ PDAs derived from other **on‑chain accounts** rather than the user directly.
 
 ### B1 — Simple Child
 
-`[b"vault", parent]` → custody vaults (Raydium CLMM, Orca Whirlpool).
+`[b"vault", parent]` → custody vaults (Raydium CLMM, Orca Whirlpool, Picasso, Pyth, Loopscale).
 
 ### B2 — Nested / Hierarchical
 
@@ -104,13 +104,13 @@ When a program needs exactly **one** instance of something—e.g. a config or fe
 const [configPda] = derivePda([Buffer.from("config")], PROGRAM_ID);
 ```
 
-Examples: Vaultka’s `LENDING` & `STRATEGY` accounts, many DAO registries.
+Examples: Vaultka’s `LENDING` & `STRATEGY` accounts, many DAO registries, Tensor's global margin account, NX Finance's global ID.
 
 ---
 
 ## 5 — Associated Token Accounts (ATA)
 
-Program ID: `` (Associated Token Program).
+Program ID: `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL` (Associated Token Program).
 
 The ATA is the canonical SPL‑token account for `(owner, mint)`. Seeds:
 
@@ -130,7 +130,7 @@ const [ata] = derivePda([
 
 ## 6 — Pattern D – Metaplex Standard
 
-Program ID: ``
+Program ID: `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`
 
 | Account Type                | Seed Recipe                                                          |
 | --------------------------- | -------------------------------------------------------------------- |
@@ -158,6 +158,10 @@ Used by **every** NFT on Solana.
 | **Multi‑Chain Addresses** | When seeding with EVM addresses, drop the `0x` prefix & hex‑decode | `Buffer.from(addr.slice(2), "hex")` (**DeBridge**)    |
 | **Cross‑Program PDA**     | Use PDA‑A as a seed for PDA‑B                                      | Safe because PDAs are off‑curve                       |
 | **Nested PDAs**           | Build trees of authority / state                                   | `[b"child", parentPda, idxLE]`                        |
+| **Numeric Prefixes**      | Space-efficient alternative to string prefixes                     | `[1, 0, owner, market]` (**Kamino**)                  |
+| **Exotic Integer Encoding** | Using `i32` or `i64` for seeds                                     | `i32ToBytes(startIndex)` (**Raydium**, **Meteora**)   |
+| **Seeds from Account Data** | Using a value from another account's data as a seed                | `[b"promotion_authority", seedValue]` (**Lulo**)       |
+| **Singleton-as-Seed**     | Using a global PDA as a seed for other PDAs                        | `[b"margin", singletonPda, owner]` (**Tensor**, **NX Finance**) |
 
 Anchor macro for reference:
 
@@ -178,6 +182,8 @@ pub struct User {/* fields */}
 3. Distinguish **mint vs token‑account**; mixing them yields a different address.
 4. Two different programs ≠ same PDA, even with identical seeds.
 5. Verify signers: in raw Rust, call `assert_eq!(pda, Pubkey::create_program_address(...))`; Anchor does this automatically.
+6. **Avoid `createWithSeed`:** This deprecated method is less flexible and can be brittle. Prefer `findProgramAddressSync`. The **Save** protocol uses this.
+7. **Avoid custom seed generation:** The **Save** protocol also uses a fragile custom seed generation function. This is highly discouraged. Stick to simple, well-understood seed recipes.
 
 ---
 
@@ -185,15 +191,47 @@ pub struct User {/* fields */}
 
 | Protocol                  | PDA Recipe (simplified)                    |
 | ------------------------- | ------------------------------------------ |
-| **Orca Whirlpool**        | `[b"whirlpool", config, mintA, mintB]`     |
-| **Jupiter Escrow**        | `[b"Escrow", locker, user]`                |
-| **Phoenix Seat**          | `[b"seat", market, trader]`                |
-| **Drift Insurance**       | `[b"insurance", state]`                    |
-| **Zeta Margin**           | `[b"margin", group, user]`                 |
+| **01 Protocol**           | `[owner, state, b"marginv1"]`              |
+| **Adrena**                | `[b"user_staking", owner, stakingPda]`      |
+| **Allbridge**             | `[b"user_deposit", tokenAddress, owner]`    |
+| **Aurory**                | `[owner]`                                  |
+| **Clone**                 | `[b"user", owner]`                          |
+| **DeBridge**              | `[receiptBuffer, season, evmOwner]`        |
+| **Drift**                 | `[b"user", owner, subAccountIdLE]`          |
+| **Elemental**             | `[b"position", ownerAddress, poolAddress]` |
+| **Flash**                 | `[b"stake", owner, poolKey]`                |
+| **Francium**              | `[userPublicKey, farmingPoolAccount, associatedAccount]` |
+| **Grass**                 | `[owner, b"userStakeInfo"]`                 |
+| **Hawksight**             | `[b"multi-user", HAWKSIGHT_FARM, owner]`    |
 | **Helium Voter**          | `[registrar, b"voter", user]`              |
-| **Raydium CLMM Position** | `[b"position", nftMint]`                   |
+| **Jupiter Escrow**        | `[b"Escrow", locker, user]`                |
+| **Kamino**                | `[1, 0, owner, market, pair[0], pair[1]]`  |
+| **Loopscale**             | `[b"order_ledgers", order]`                 |
+| **Loverflow**             | `[owner.slice(0, 31)]`                     |
+| **Lulo**                  | `[b"promotion_authority", seedValue]`       |
+| **Magic Eden**            | `[b"m2", m2AuctionHouse, owner]`            |
+| **Marinade**              | `[b"claim_record", hardcodedPk, owner]`     |
+| **Meteora DLMM**          | `[b"bin_array", lbPair, indexLE]`           |
+| **Meteora Farm**          | `[owner, farm]`                            |
+| **Nosana**                | `[b"stake", nosMint, owner]`                |
+| **NX Finance Lend**       | `[b"lending_account", nxMarket, lending_pool_pda, owner]` |
+| **NX Finance Stake**      | `[stakePool, b"nx_account", owner]`         |
+| **NX Finance Leverage**   | `[globalIdPda, owner, b"account"]`          |
+| **Orca Whirlpool**        | `[b"whirlpool", config, mintA, mintB]`     |
 | **Parcl LP Position**     | `[b"lp_position", market, owner, indexLE]` |
-| **Tensor Margin**         | `[b"margin", groupPda, trader]`            |
+| **Phoenix Seat**          | `[b"seat", market, trader]`                |
+| **Picasso**               | `[b"vault_params", ei]`                     |
+| **Pyth**                  | `[b"custody", stakingAccount]`              |
+| **Quarry**                | `[b"Miner", quarry, owner]`                 |
+| **Rain**                  | `[b"poolv2", owner]`                        |
+| **Raydium CLMM Position** | `[b"position", nftMint]`                   |
+| **Raydium Stake**         | `[hardcodedPk, owner, b"staker_info_v2_associated_seed"]` |
+| **Save**                  | `createWithSeed(owner, customSeed)`        |
+| **Star Atlas**            | `[b"Proxy", proxyEscrowAddress, owner]`     |
+| **Tensor Margin**         | `[b"margin", singletonPda, owner, 0LE]`     |
+| **Vaultka**               | `[b"USER_INFOS", owner]`                    |
+| **Zelo**                  | `[b"user-v2", owner]`                       |
+| **Zeta Margin**           | `[b"margin", group, user]`                 |
 
 ---
 
@@ -206,6 +244,14 @@ export const u64le = (n: bigint) => {
   buf.writeBigUInt64LE(n);
   return buf;
 };
+
+/** Convert number → fixed-width LE buffer (i32 = 4 bytes) */
+export const i32le = (n: number) => {
+    const arr = new ArrayBuffer(4);
+    const view = new DataView(arr);
+    view.setInt32(0, n, true);
+    return new Uint8Array(arr);
+}
 
 /** First 31 bytes of a PublicKey buffer – avoids >32 B seeds */
 export const first31 = (pub: PublicKey) => pub.toBuffer().subarray(0, 31);
