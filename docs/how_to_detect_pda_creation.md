@@ -19,13 +19,16 @@
 
 ---
 
-## 1  Background
+## 1 Background
 
-A **Program‑Derived Address (PDA)** is an on‑chain account whose address is deterministically generated from *seeds* plus a program ID.  No private key exists; the owning program signs for it via `invoke_signed`.  Detecting PDA creation tied to a wallet lets you:
+
+A **Program‑Derived Address (PDA)** is an on‑chain account whose address is deterministically generated from *seeds* plus a program ID. Crucially, **no private key exists for a PDA**. Instead, the program that "owns" the PDA acts as its authority, "signing" for it via `invoke_signed` in a process verified by the Solana runtime. This means a user's wallet cannot directly sign for a PDA. Detecting PDA creation tied to a wallet lets you:
+
 
 - Reconstruct a user’s on‑chain state (positions, vaults, escrow accounts).
 - Trigger off‑chain indexing or alerts when new state appears.
 - Audit protocols for hidden resource consumption.
+
 
 Unlike ordinary accounts, PDAs are *created* at runtime—usually within **inner instructions**—so you can’t just watch SystemProgram `CreateAccount` calls at the top level.
 
@@ -50,10 +53,10 @@ This rule catches PDAs, freshly minted ATAs, ordinary throw‑away System accoun
 ## 4  Parsing Transactions – Step by Step
 
 1. **Enumerate all account keys** for the message **plus** address‑lookup tables (ALT).
-2. **Scan top‑level ****\`\`****.**  Flag where `pre == 0  &&  post > 0`.
+2. **Scan top‑level ****`​`****.**  Flag where `pre == 0  &&  post > 0`.
 3. **Walk inner instructions** (CPI):
    - Look for `SystemProgram::CreateAccount`, `CreateAccountWithSeed`, `Allocate`, `AllocateWithSeed`.
-   - The \*\*first \*\*\`\` in those instructions is the newly allocated address.
+   - The **first **`​`** in those instructions is the newly allocated address.
 4. **Merge the two sets** → candidate list of "accounts born in this tx".
 
 Why bother with both?  A PDA often shows up only in **inner instructions**; ATAs and plain System accounts sometimes appear only via the balance heuristic.
@@ -65,10 +68,10 @@ Why bother with both?  A PDA often shows up only in **inner instructions**; ATAs
 You usually care about *external* PDAs (owned by protocols), not boring self‑owned stuff.
 
 | Filter                                                     | Rationale                                   |
-| ---------------------------------------------------------- | ------------------------------------------- |
+| :--------------------------------------------------------- | :------------------------------------------ |
 | `candidate == wallet`                                      | It’s just the wallet itself.                |
-| `owner == TOKEN_PROGRAM && candidate == ATA(wallet, mint)` | Canonical ATA—fine to ignore.               |
-| `owner == SystemProgram.programId`                         | Plain System account; unlikely to be a PDA. |
+| `owner == TOKEN_PROGRAM_ID && candidate == ATA(wallet, mint)` | Canonical ATA—fine to ignore. (The `TOKEN_PROGRAM_ID` is the program that owns the ATA).               |
+| `owner == SystemProgram.programId`                         | Plain System account; owned by the System Program itself. |
 
 Everything left is likely a PDA or some other program‑owned auxiliary account.
 
@@ -76,7 +79,7 @@ Everything left is likely a PDA or some other program‑owned auxiliary account.
 
 ## 6  Classifying the Finds
 
-1. \*\*Fetch the account’s \*\*\`\`.  This is the program that created it.
+1. **Fetch the account’s `owner`**. This is the program that owns the account.
 2. **Match against known PDA patterns** (see *Solana PDA Derivation Patterns* doc):
 
 ```typescript
@@ -161,7 +164,7 @@ export async function detectPdaCreations(
 - Paginate sigs in **reverse‑chronological order** so you can early‑exit once you hit a date boundary.
 - Parallelise `getTransaction` calls (but stay within your RPC rate limits).
 - Cache `getAccountInfo` results; ownership rarely changes.
-- If you run your own RPC, use the \`\` plugin for bulk export instead of paginated RPC.
+- If you run your own RPC, use the `​` plugin for bulk export instead of paginated RPC.
 
 ---
 
