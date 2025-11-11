@@ -36,30 +36,30 @@ Unlike ordinary accounts, PDAs are *created* at runtime—usually within **inner
 
 ## 2  What Data You Need
 
-- **All transactions a wallet signed.**   `getSignaturesForAddress(wallet)` paginates sigs.
-- **Full parsed transactions.**  `getTransaction(sig, { maxSupportedTransactionVersion: 0, jsonParsed: true })` so you get balances and inner instructions.
+- **All transactions a wallet signed.**   `getSignaturesForAddress(wallet)` paginates sigs (max 1,000 per call).
+- **Full parsed transactions.**  `getTransaction(sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed" })` so you get balances and inner instructions. The `maxSupportedTransactionVersion: 0` parameter is required to support versioned transactions (v0) that may use Address Lookup Tables (ALTs).
 - **(Optional)** `getAccountInfo` one slot before a tx for rock‑solid existence checks.
 
 ---
 
 ## 3  Baseline Heuristic
 
-> **If an account’s **``**, the account *****did not exist***** until this transaction.**
+> **If an account's `preBalance == 0` and `postBalance > 0`, the account *did not exist* until this transaction.**
 
-This rule catches PDAs, freshly minted ATAs, ordinary throw‑away System accounts—*everything*.  We’ll narrow it down in the next steps.
+This rule catches PDAs, freshly minted ATAs, ordinary throw‑away System accounts—*everything*.  We'll narrow it down in the next steps.
 
 ---
 
 ## 4  Parsing Transactions – Step by Step
 
-1. **Enumerate all account keys** for the message **plus** address‑lookup tables (ALT).
-2. **Scan top‑level ****`​`****.**  Flag where `pre == 0  &&  post > 0`.
+1. **Enumerate all account keys** for the message **plus** address‑lookup tables (ALT) if using versioned transactions (v0).
+2. **Scan top‑level `preBalances` and `postBalances`.**  Flag where `pre == 0  &&  post > 0`.
 3. **Walk inner instructions** (CPI):
    - Look for `SystemProgram::CreateAccount`, `CreateAccountWithSeed`, `Allocate`, `AllocateWithSeed`.
-   - The **first **`​`** in those instructions is the newly allocated address.
+   - The **first account** in those instructions is the newly allocated address.
 4. **Merge the two sets** → candidate list of "accounts born in this tx".
 
-Why bother with both?  A PDA often shows up only in **inner instructions**; ATAs and plain System accounts sometimes appear only via the balance heuristic.
+Why bother with both?  A PDA often shows up only in **inner instructions**; ATAs and plain System accounts sometimes appear only via the balance heuristic. You can also check `preTokenBalances` and `postTokenBalances` to specifically detect new token account creation.
 
 ---
 
@@ -111,7 +111,10 @@ export async function detectPdaCreations(
     const created: Set<string> = new Set();
 
     for (const { signature } of sigs) {
-        const tx = await conn.getTransaction(signature, { maxSupportedTransactionVersion: 0 });
+        const tx = await conn.getTransaction(signature, {
+            maxSupportedTransactionVersion: 0,
+            encoding: "jsonParsed",
+        });
         if (!tx?.meta) continue;
 
         const keys = tx.transaction.message.getAccountKeys({
@@ -146,7 +149,10 @@ export async function detectPdaCreations(
         if (!info) continue; // shouldn’t happen
 
         if (info.owner.equals(SystemProgram.programId)) continue; // plain system account
-        // TODO: filter ATAs here if you import the ATA derivation helper
+
+        // Filter out ATAs (Associated Token Accounts)
+        // Note: You'll need to import getAssociatedTokenAddress from @solana/spl-token
+        // and iterate through known mints, or skip this filter to include ATAs
 
         out.push(pub);
     }
@@ -164,14 +170,15 @@ export async function detectPdaCreations(
 - Paginate sigs in **reverse‑chronological order** so you can early‑exit once you hit a date boundary.
 - Parallelise `getTransaction` calls (but stay within your RPC rate limits).
 - Cache `getAccountInfo` results; ownership rarely changes.
-- If you run your own RPC, use the `​` plugin for bulk export instead of paginated RPC.
+- If you run your own RPC, use the Geyser plugin for bulk export instead of paginated RPC.
+- **Modern alternative (2025)**: Consider using Helius's `getTransactionsForAddress` API, which combines `getSignaturesForAddress` and `getTransaction` into a single call with powerful filtering options (time-based, status-based, slot-based) and can fetch up to 100 full transactions or 1,000 signatures in one request.
 
 ---
 
 ## 9  Limitations & Edge Cases
 
 - **Factories**: some programs batch‑create PDAs for many users in a single tx; the wallet may not be the fee‑payer, so you must also scan *any* tx where the wallet appears as an account, not just signer.
-- **Reallocs**: `SystemProgram::Allocate` can upgrade an existing account’s size; doesn’t violate the balance heuristic.
+- **Reallocs**: Accounts can be resized using the modern `realloc` feature (since May 2022) which increases existing account size by up to 10 KB per transaction. The `SystemProgram::Allocate` and `AllocateWithSeed` instructions are used for **initial allocation** of space when creating accounts, not for resizing. Reallocs don't violate the balance heuristic as the account already exists.
 - **Rent‑exempt zero**: In rare cases an account is funded by another tx then allocated; preBalance may be >0 even though the account had no data.
 - **Closed accounts**: De‑allocations (`SystemProgram::Assign` + zero lamports) aren’t covered here; track `postBalance == 0` if you need deletions.
 
