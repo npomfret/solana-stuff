@@ -14,7 +14,7 @@ A common point of confusion for users is the distinction between an account's "o
 
 In short: The **authority** (you) signs to approve an action, and the **owner** (the program) executes it. Your wallet never directly "owns" your token accounts; it holds the authority to control them.
 
-New accounts must be funded with a minimum balance (in lamports) to cover "rent" for their data size, though if funded above a certain threshold they become rent-exempt (the lamports act as a one-time deposit that can be recovered on account closure). Only the designated owner program can modify an account's data or debit its lamports. Importantly, **only Solana's native System Program can create new accounts** – all other programs must delegate to the System Program to allocate accounts for them.
+New accounts must be funded with a minimum balance equal to **2 years of rent** for their data size to become rent-exempt. As of 2025, all accounts are required to be rent-exempt (you cannot create accounts with less than 2 years of rent). The lamports act as a one-time deposit that can be recovered when the account is closed. Only the designated owner program can modify an account's data or debit its lamports. Importantly, **only Solana's native System Program can create new accounts** – all other programs must delegate to the System Program to allocate accounts for them.
 
 When an account is first created, its fields are initialized as follows: the **lamports** field is set to the funding amount (often the rent-exemption minimum), **owner** is set to the specified program (or remains the System Program for system-owned accounts), **data** length is allocated to the requested size (with content zero-initialized unless the creating program immediately overwrites it), and **executable** is usually `false` (except when loading a program's code). For example, a newly created token account might show a balance of rent-exempt lamports, `owner` equal to the Token Program's ID, `data` length of 165 bytes (the size of a token account state), and `executable: false`. An account created to deploy a program would have `owner` set to a BPF loader program and `executable: true` after deployment.
 
@@ -133,7 +133,18 @@ The JSON would show the createAccount (owner Tokenkeg, space 82) and then a `ini
 
 ### Multisig Account
 
-The SPL Token program also allows a special multisig account (to use N-of-M signing for token authority). That account type needs space for a structure that holds multiple signer addresses. The creation is again System create (with owner = Token program, space = 355 bytes for a 2-of-3 multisig or up to 11 signer multisig, typically 355 bytes covers maximum 11 signers) and then a `InitializeMultisig` instruction on the Token program (specifying the number of signatures required and the signer addresses).
+The SPL Token program also allows a special multisig account (to use N-of-M signing for token authority). That account type needs space for a structure that holds multiple signer addresses. The creation is again System create (with owner = Token program, space = **355 bytes** - a fixed size that supports up to 11 signers maximum). The structure includes: 1 byte for M (required signatures), 1 byte for N (total signers), 1 byte for initialization flag, and 352 bytes for 11 × 32-byte public keys (1 ≤ M ≤ N ≤ 11). This is followed by an `InitializeMultisig` instruction on the Token program (specifying the number of signatures required and the signer addresses).
+
+### Note on Token-2022 and Variable Sizes
+
+The newer **Token-2022 program** maintains backward compatibility (first 165 bytes for accounts, 82 bytes for mints) but allows **variable-sized accounts** through extensions. Extensions are stored in a TLV (Type-Length-Value) format after the base account data:
+
+- **Mint extensions** only affect mint account sizes
+- **Token account extensions** only affect token account sizes
+- All extensions must be initialized before mint initialization
+- You can no longer reliably detect account type by size alone with Token-2022
+
+This means filtering by `dataSize: 165` will only find standard SPL token accounts, not Token-2022 accounts with extensions. Token-2022 also provides a `reallocate` instruction for adding extensions to existing token accounts.
 
 ### Usage
 
@@ -176,7 +187,7 @@ As an engineer, to identify stake account creations, look for System instruction
 
 **Vote accounts** are another special account type, owned by the Vote Program (`Vote111111111111111111111111111111111111111`), used by validators to record their votes and earn rewards. Only validators (or those setting up a validator) typically create vote accounts. The process is analogous to stake accounts:
 
-1. **System CreateAccount**: to allocate a new account owned by the Vote Program. Vote accounts have a larger data size (several kilobytes; for example, a vote account stores vote credits, authorized voters, a vote history, etc.). The exact space is on the order of a few KB (often around Vote state struct size, which might be ~SizeOf(VoteState), roughly 3730 bytes, but using CLI ensures correct value). The funding lamports must cover rent for that size.
+1. **System CreateAccount**: to allocate a new account owned by the Vote Program. Vote accounts have a variable data size (typically 3,731+ bytes) that grows with vote history. A vote account stores vote credits, authorized voters, and a rolling vote history. The exact space depends on the vote state struct, and using the CLI ensures the correct value is allocated. The funding lamports must cover rent for that size.
 2. **Vote Program InitializeAccount**: an instruction that initializes the vote account with the validator's identity, vote authority, commission percentage, and authorized withdrawer. The Solana CLI's `solana create-vote-account` command packages these: you provide a keypair for the new vote account, a validator identity public key, and optionally a different vote-authority and withdraw-authority key.
 
 In the transaction, expect "System Program: Create Account" (with `owner: Vote111111111...`) followed by "Vote Program: InitializeAccount" (or similar name) containing the node identity, vote and withdraw authority addresses. After that, the vote account is ready and can start receiving votes from the validator node. The vote account address is fixed after creation (if you needed it deterministic, you can use the `--seed` option in the CLI, which essentially uses `createAccountWithSeed` behind the scenes).
@@ -210,7 +221,63 @@ A nonce account is controlled by a single **Nonce Authority**. This authority is
 - **Advance the nonce**: Use the nonce for a transaction, which causes it to be replaced by a new blockhash.
 - **Withdraw from the account**: Transfer the lamports out of the nonce account, effectively closing it.
 
-## 9. Program Deployments (BPF Program Accounts)
+## 9. Closing Accounts and Recovering Rent
+
+Since rent-exempt lamports act as a recoverable deposit, you can reclaim your SOL by closing accounts you no longer need. When an account is closed, its data is deleted from the blockchain and the rent is refunded to the account owner or a designated recipient.
+
+### Methods for Closing Accounts
+
+**Token Accounts**: Use the `spl-token close <address>` command. The account must have a **zero balance** before it can be closed. The rent-exempt lamports (approximately 0.002 SOL) are returned to the authority. You can also use tools like Sol Incinerator to bulk-close multiple empty token accounts.
+
+**Program Accounts**: Use `solana program close [BUFFER_ACCOUNT_ADDRESS]` to close program buffer accounts and recover their lamports. This is particularly useful after failed deployments or when cleaning up unused program buffers.
+
+**System Accounts (Wallets)**: For accounts owned by the System Program, simply transfer all lamports out using `system_instruction::transfer`. Once the balance reaches zero, the account effectively no longer exists on-chain (though it may be re-created if it receives lamports again).
+
+**Stake Accounts**: After de-activating a stake account, use the withdraw instruction to move all lamports (minus rent-exemption) to another account. The withdrawer authority must sign this transaction.
+
+### Important Considerations
+
+- You cannot close an account with a non-zero balance (for token accounts) or active state (for stake accounts)
+- Only the designated authority can close an account and specify where the lamports are returned
+- Closing unused accounts is a good practice to reclaim SOL and reduce on-chain state bloat
+- Some programs may have specific close instructions that handle cleanup logic before returning lamports
+
+## 10. Account Resizing (Reallocation)
+
+Since May 2022, Solana supports **account reallocation**, allowing you to change an account's size after creation. This feature is particularly useful for accounts that need to grow over time.
+
+### Reallocation Constraints
+
+**Maximum increase per realloc**: **10,240 bytes** (10 KB) per transaction. If you need to grow an account by more than 10 KB, you must perform multiple realloc operations across separate transactions.
+
+**Maximum total account size**: **10 MB**. This is the absolute maximum size for any account on Solana.
+
+**Initial creation limit**: When first creating an account, you cannot initialize more than 10,240 bytes in size. Larger accounts must be created at the minimum size and then grown through realloc.
+
+### Common Use Cases
+
+**PDAs (Program Derived Addresses)**: PDAs can only be initialized with 10 KB of space and are limited to a 10 KB increase per transaction. For programs that need to store growing amounts of data, realloc is essential.
+
+**Token-2022 Extensions**: The Token-2022 program provides a `reallocate` instruction specifically for adding extensions to existing token accounts. This allows you to upgrade token accounts with new functionality after they've been created.
+
+**Dynamic data structures**: Programs that store variable-length data (like lists or user-generated content) can use realloc to grow storage as needed, rather than pre-allocating maximum space.
+
+### Implementation
+
+In Anchor framework (version 0.25.0+), the `realloc` constraint provides easy access to resizing:
+
+```rust
+#[account(mut, realloc = new_size, realloc::payer = user, realloc::zero = false)]
+pub my_account: Account<'info, MyData>,
+```
+
+Before realloc was introduced, the only option was to create a new account with the desired size and migrate data, which was costly and complex.
+
+### NFT Metadata Resizing Initiative
+
+As of 2025, Metaplex has opened a resizing window (until April 25, 2025) for NFT metadata accounts, allowing holders to reclaim excess SOL from oversized metadata accounts. After this date, Metaplex will resize any remaining NFTs and send the reclaimed SOL to the Metaplex DAO.
+
+## 11. Program Deployments (BPF Program Accounts)
 
 Solana "programs" (smart contracts) themselves live in special accounts. Deploying a program involves creating one or more accounts to hold the program's code and metadata. The **BPF Loader programs** (e.g., `BPFLoaderUpgradeab1e11111111111111111111111111` for the upgradeable loader) manage these, but the creation of the accounts still ultimately goes through the System Program or the loader's internal create logic.
 
@@ -232,7 +299,7 @@ After deployment, the program account's executable flag becomes `true`. If you q
 
 Look for create instructions with owner being one of the BPF Loader IDs (the common ones: `BPFLoader2111111111111111111111111111111111` for legacy, or the upgradeable `BPFLoaderUpgradeab1e11111111111111111111111111`). Also, the lamports amounts are usually quite large because the program account must be rent-exempt (and code can be hundreds of KB to a few MB). This is a rarer scenario unless you specifically track program deployments.
 
-## Recognizing Account Creation in Transactions (Summary)
+## 12. Recognizing Account Creation in Transactions (Summary)
 
 Every method above ultimately relies on the System Program to allocate new accounts, either directly or indirectly. When scanning transaction data for account creations, here are some general signs to look for:
 
