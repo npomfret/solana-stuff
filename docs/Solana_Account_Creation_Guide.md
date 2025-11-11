@@ -29,7 +29,7 @@ For a standard wallet account that you use to hold SOL, the account's address is
 
 The primary way to create a new account is by invoking the System Program's **Create Account** instruction. This method is used for most account types on Solana. The `createAccount` instruction takes parameters for: the funding payer, the public key of the new account, the amount of lamports to transfer into the new account, the space (number of bytes to allocate for the account's data), and the owner program id that will own the new account. The System Program will deduct the lamports from the payer, allocate the account with the given space, and assign its ownership to the specified program.
 
-In a raw transaction's JSON, a System Program create account instruction is identifiable by `programId: "11111111111111111111111111111111"` (the System Program's address) and the instruction data corresponding to a "Create" command. If you use the RPC with JSON parsing, it will explicitly show something like `"type": "createAccount"` along with fields such as `"lamports"`, `"newAccount"`, `"owner"`, and `"space"` under the parsed instruction info. For example, a parsed transaction might include:
+In a raw transaction's JSON, a System Program create account instruction is identifiable by `programId: "11111111111111111111111111111111"` (the System Program's address) and the instruction data corresponding to a "Create" command. If you use the RPC with JSON parsing, it will explicitly show something like `"type": "createAccount"` along with fields such as `"lamports"` (the funding amount), `"newAccount"` (the public key of the new account), `"owner"` (the program ID that will own the new account), and `"space"` (the data size in bytes) under the parsed instruction info. For example, a parsed transaction might include:
 
 ```json
 {
@@ -194,6 +194,8 @@ In the transaction, expect "System Program: Create Account" (with `owner: Vote11
 
 Because vote accounts are usually created by validators via CLI or scripts, you might not frequently parse them in typical dApp transaction flows. But if you do, the hallmark is the owner being the Vote program and the Initialize instruction. Once active, stake accounts from delegators will point to this vote account to delegate stake.
 
+Note that unlike some other account types, there is no explicit 'close vote account' instruction. To effectively close a vote account and reclaim its rent-exempt lamports, the withdrawer authority must sign a transaction to withdraw all lamports from the account. Once the account's balance reaches zero, it will be deallocated by the runtime.
+
 #### Who Can Sign for a Vote Account?
 Similar to stake accounts, vote accounts have distinct authorities:
 - **Vote Authority**: This key is used to sign the actual voting transactions that the validator sends to the network.
@@ -221,28 +223,7 @@ A nonce account is controlled by a single **Nonce Authority**. This authority is
 - **Advance the nonce**: Use the nonce for a transaction, which causes it to be replaced by a new blockhash.
 - **Withdraw from the account**: Transfer the lamports out of the nonce account, effectively closing it.
 
-## 9. Closing Accounts and Recovering Rent
-
-Since rent-exempt lamports act as a recoverable deposit, you can reclaim your SOL by closing accounts you no longer need. When an account is closed, its data is deleted from the blockchain and the rent is refunded to the account owner or a designated recipient.
-
-### Methods for Closing Accounts
-
-**Token Accounts**: Use the `spl-token close <address>` command. The account must have a **zero balance** before it can be closed. The rent-exempt lamports (approximately 0.002 SOL) are returned to the authority. You can also use tools like Sol Incinerator to bulk-close multiple empty token accounts.
-
-**Program Accounts**: Use `solana program close [BUFFER_ACCOUNT_ADDRESS]` to close program buffer accounts and recover their lamports. This is particularly useful after failed deployments or when cleaning up unused program buffers.
-
-**System Accounts (Wallets)**: For accounts owned by the System Program, simply transfer all lamports out using `system_instruction::transfer`. Once the balance reaches zero, the account effectively no longer exists on-chain (though it may be re-created if it receives lamports again).
-
-**Stake Accounts**: After de-activating a stake account, use the withdraw instruction to move all lamports (minus rent-exemption) to another account. The withdrawer authority must sign this transaction.
-
-### Important Considerations
-
-- You cannot close an account with a non-zero balance (for token accounts) or active state (for stake accounts)
-- Only the designated authority can close an account and specify where the lamports are returned
-- Closing unused accounts is a good practice to reclaim SOL and reduce on-chain state bloat
-- Some programs may have specific close instructions that handle cleanup logic before returning lamports
-
-## 10. Account Resizing (Reallocation)
+## 9. Account Resizing (Reallocation)
 
 Since May 2022, Solana supports **account reallocation**, allowing you to change an account's size after creation. This feature is particularly useful for accounts that need to grow over time.
 
@@ -277,33 +258,139 @@ Before realloc was introduced, the only option was to create a new account with 
 
 As of 2025, Metaplex has opened a resizing window (until April 25, 2025) for NFT metadata accounts, allowing holders to reclaim excess SOL from oversized metadata accounts. After this date, Metaplex will resize any remaining NFTs and send the reclaimed SOL to the Metaplex DAO.
 
+## 10. Closing Accounts and Recovering Rent
+
+Since rent-exempt lamports act as a recoverable deposit, you can reclaim your SOL by closing accounts you no longer need. When an account is closed, its data is deleted from the blockchain and the rent is refunded to the account owner or a designated recipient.
+
+### Methods for Closing Accounts
+
+**Token Accounts**: Use the `spl-token close <address>` command. The account must have a **zero balance** before it can be closed. The rent-exempt lamports (approximately 0.002 SOL) are returned to the authority. You can also use tools like Sol Incinerator to bulk-close multiple empty token accounts.
+
+**Program Accounts**: Use `solana program close [BUFFER_ACCOUNT_ADDRESS]` to close program buffer accounts and recover their lamports. This is particularly useful after failed deployments or when cleaning up unused program buffers.
+
+**System Accounts (Wallets)**: For accounts owned by the System Program, simply transfer all lamports out using `system_instruction::transfer`. Once the balance reaches zero, the account effectively no longer exists on-chain (though it may be re-created if it receives lamports again).
+
+**Stake Accounts**: After de-activating a stake account, use the withdraw instruction to move all lamports (minus rent-exemption) to another account. The withdrawer authority must sign this transaction.
+
+### Important Considerations
+
+- You cannot close an account with a non-zero balance (for token accounts) or active state (for stake accounts)
+- Only the designated authority can close an account and specify where the lamports are returned
+- Closing unused accounts is a good practice to reclaim SOL and reduce on-chain state bloat
+- Some programs may have specific close instructions that handle cleanup logic before returning lamports
+- **Multisig Token Accounts**: Currently, the SPL Token program does not provide a direct instruction to close multisig token accounts. This means the rent-exempt lamports for these accounts are effectively locked unless the program is extended in the future.
+
 ## 11. Program Deployments (BPF Program Accounts)
+
+
 
 Solana "programs" (smart contracts) themselves live in special accounts. Deploying a program involves creating one or more accounts to hold the program's code and metadata. The **BPF Loader programs** (e.g., `BPFLoaderUpgradeab1e11111111111111111111111111` for the upgradeable loader) manage these, but the creation of the accounts still ultimately goes through the System Program or the loader's internal create logic.
 
+
+
 When you deploy a program using `solana program deploy`, the process will:
 
-1. **Create a Program Account**: a small account that will ultimately have the executable flag set. If using the upgradeable loader (v3), this is actually the Program account (owned by BPFLoaderUpgrade program) which is a pointer to a Program Data account. For immutable programs (v2 or earlier), the single account holds the code.
-2. **Create a Program Data Account**: (for upgradeable programs) which holds the actual ELF binary bytes and is owned by BPFLoaderUpgrade. This account's size equals the program's code length and is rent-exempt funded. It's usually created via the BPF loader's own instructions (`Allocate` and `Write`), but those underneath use system account creation to allocate the space.
-3. **Possibly a Buffer Account**: In some deployment flows, a temporary buffer account is created to upload the program data, then the buffer is consumed to finalize the program. The CLI often does: System create a buffer account (owner = BPFLoaderUpgrade), upload chunks to it, then invoke a loader instruction to finalize which internally may create the Program account or assign the buffer to it.
+
+
+1.  **Create a Program Account**: a small account that will ultimately have the executable flag set. If using the upgradeable loader (v3), this is actually the Program account (owned by BPFLoaderUpgrade program) which is a pointer to a Program Data account. For immutable programs (v2 or earlier), the single account holds the code.
+
+2.  **Create a Program Data Account**: (for upgradeable programs) which holds the actual ELF binary bytes and is owned by BPFLoaderUpgrade. This account's size equals the program's code length and is rent-exempt funded. It's usually created via the BPF loader's own instructions (`Allocate` and `Write`), but those underneath use system account creation to allocate the space.
+
+3.  **Possibly a Buffer Account**: In some deployment flows, a temporary buffer account is created to upload the program data, then the buffer is consumed to finalize the program. The CLI often does: System create a buffer account (owner = BPFLoaderUpgrade), upload chunks to it, then invoke a loader instruction to finalize which internally may create the Program account or assign the buffer to it.
+
+
 
 In transaction records, deploying a program can be complex – it might span multiple transactions (one for each write chunk and one for finalize). The final transaction to finalize an upgradeable program typically has a Loader instruction like `DeployProgram` or `UpgradeProgram` that might implicitly create the Program Data account if not already present. The simpler case is that you will see explicit System creates for the program accounts. For example, a transaction might list:
 
+
+
 - "System Program: Create Account" (with owner = BPFLoaderUpgradeab1e... for the program data, space = some large number for code size)
+
 - another "System Program: Create Account" (owner = BPFLoaderUpgrade... for the program account itself, space = 0 or a small fixed size, just enough to hold the program's metadata like authority)
+
 - then one or more BPFLoader instructions (Write, Finalize)
+
+
 
 After deployment, the program account's executable flag becomes `true`. If you query that account, it will have `owner` equal to the loader program (so not System Program but one of the loaders), and data either empty (in case of program account that just delegates to program-data) or filled with the code (for older loader). The program data account (if upgradeable) will have the bulk of data and be owned by the loader as well.
 
+
+
 ### Identifying program account creation
+
+
 
 Look for create instructions with owner being one of the BPF Loader IDs (the common ones: `BPFLoader2111111111111111111111111111111111` for legacy, or the upgradeable `BPFLoaderUpgradeab1e11111111111111111111111111`). Also, the lamports amounts are usually quite large because the program account must be rent-exempt (and code can be hundreds of KB to a few MB). This is a rarer scenario unless you specifically track program deployments.
 
-## 12. Recognizing Account Creation in Transactions (Summary)
+
+
+## 12. Address Lookup Table Accounts
+
+
+
+With the introduction of versioned transactions, Solana introduced **Address Lookup Table (ALT) Accounts**. These accounts are owned by the Address Lookup Table Program (`AddressLookupTab1e1111111111111111111111111111111`) and store a list of on-chain addresses, allowing transactions to reference these addresses by a compact index rather than their full 32-byte public key. This helps overcome transaction size limits for complex transactions.
+
+
+
+Creating an ALT account involves:
+
+
+
+1.  **System Program `createAccount`**: To allocate a new account owned by the Address Lookup Table Program. The size of an ALT account is variable, depending on the number of addresses it stores.
+
+2.  **Address Lookup Table Program `CreateLookupTable` instruction**: This instruction initializes the lookup table, specifying the authority that can modify it and the addresses to be included.
+
+
+
+In a transaction, you would see a System Program `createAccount` instruction with the owner set to the Address Lookup Table Program ID. This would be followed by an instruction to the Address Lookup Table Program, likely parsed as `CreateLookupTable`.
+
+
+
+### Usage
+
+
+
+ALT accounts are primarily used by dApps and wallets to optimize transaction size for complex operations involving many accounts. While not as commonly encountered as token or stake accounts, they are an important part of the modern Solana account model for advanced use cases.
+
+
+
+## 13. Config Program Accounts
+
+
+
+Solana also has a **Config Program** (`Config111111111111111111111111111111111111111`) which allows for the creation of accounts to store configuration data on-chain. These accounts are used for various system-level configurations, such as validator information or feature activations. While rarely used by typical dApps, they are part of the Solana ecosystem.
+
+
+
+Creating a Config account involves:
+
+
+
+1.  **System Program `createAccount`**: To allocate a new account owned by the Config Program. The size of the account depends on the configuration data it will store.
+
+2.  **Config Program `SetConfig` instruction**: This instruction initializes the config account with the specific configuration data.
+
+
+
+In a transaction, you would see a System Program `createAccount` instruction with the owner set to the Config Program ID, followed by a `SetConfig` instruction to the Config Program.
+
+
+
+### Usage
+
+
+
+Config accounts are primarily used for system-level parameters and are not typically created or managed by end-users or most dApps. They are a niche account type but contribute to the completeness of the Solana account model.
+
+
+
+## 14. Recognizing Account Creation in Transactions (Summary)
 
 Every method above ultimately relies on the System Program to allocate new accounts, either directly or indirectly. When scanning transaction data for account creations, here are some general signs to look for:
 
 - **System Program invoked**: If the transaction (or inner instructions) contains a call to the System Program (`11111111111111111111111111111111`) with an instruction that has parameters for lamports and space, it's very likely creating or allocating an account. In parsed JSON this appears as `type: "createAccount"` or `"createAccountWithSeed"` (or occasionally `allocate` / `assign` in advanced usage). The presence of `"newAccount"` in the parsed info is a dead giveaway.
+
+- **Inner Instructions are Key**: Many account creations, especially for PDAs and ATAs, happen via Cross-Program Invocations (CPIs) and will only appear as `innerInstructions` within a transaction's metadata. Always inspect `meta.innerInstructions` (or use a block explorer that shows CPI details) to catch these creations.
 
 - **New account key in account list**: The public key of the account being created will be listed among the accountKeys in the transaction. It will often be a non-signer and marked as writable (since it's being initialized). Its index in `preBalances` will have 0, and in `postBalances` will have the funded amount.
 
