@@ -4,6 +4,16 @@
 
 Solana accounts are the fundamental data storage units on-chain. Every account has a few core properties in common: **lamports** (the account's balance in SOL's smallest unit), **data** (the on-chain stored bytes for programs or tokens), **owner** (the program that "owns" and can modify the account), an **executable** flag (true if the account holds a program's code), and a deprecated **rent_epoch** field.
 
+### A Note on Ownership vs. Authority
+
+A common point of confusion for users is the distinction between an account's "owner" and its "authority." You might think that your main wallet account "owns" your token accounts, but this is not the case.
+
+-   **Owner**: The `owner` of a Solana account is always a **program**. Only this owner program has the permission to modify the account's internal data or deduct its lamports. For example, the owner of every SPL Token Account is the official **Token Program**. The owner is the gatekeeper of the account's state.
+
+-   **Authority**: An `authority` is a separate public key (typically your main wallet address) that is granted specific powers over an account. To exercise these powers, the authority must **sign a transaction**. This signature proves to the owner program that the authority has approved the action. For a token account, your wallet is the `authority`, which means you can sign transactions to transfer or burn tokens. The Token Program (the owner) sees your valid signature and agrees to modify the token account's balance.
+
+In short: The **authority** (you) signs to approve an action, and the **owner** (the program) executes it. Your wallet never directly "owns" your token accounts; it holds the authority to control them.
+
 New accounts must be funded with a minimum balance (in lamports) to cover "rent" for their data size, though if funded above a certain threshold they become rent-exempt (the lamports act as a one-time deposit that can be recovered on account closure). Only the designated owner program can modify an account's data or debit its lamports. Importantly, **only Solana's native System Program can create new accounts** – all other programs must delegate to the System Program to allocate accounts for them.
 
 When an account is first created, its fields are initialized as follows: the **lamports** field is set to the funding amount (often the rent-exemption minimum), **owner** is set to the specified program (or remains the System Program for system-owned accounts), **data** length is allocated to the requested size (with content zero-initialized unless the creating program immediately overwrites it), and **executable** is usually `false` (except when loading a program's code). For example, a newly created token account might show a balance of rent-exempt lamports, `owner` equal to the Token Program's ID, `data` length of 165 bytes (the size of a token account state), and `executable: false`. An account created to deploy a program would have `owner` set to a BPF loader program and `executable: true` after deployment.
@@ -11,6 +21,9 @@ When an account is first created, its fields are initialized as follows: the **l
 ### Note on system-owned accounts
 
 By default, any account created by the System Program starts out owned by the System Program itself, unless immediately assigned to another owner as part of creation. Accounts owned by the System Program are often just SOL-holding wallets. In fact, if you send lamports (SOL) to a new address that has no prior account, the runtime will automatically create a system-owned account for that address. This means **transferring SOL to a new public key implicitly creates a System Account** at that address, funded with the transferred lamports. In transaction logs or JSON, you would see the System Program's Transfer instruction and the new account's balance appear post-transaction (with `owner: 11111111111111111111111111111111` – the System Program). However, to create accounts with custom owners or data space, one of the explicit techniques below is used.
+
+#### Who Can Sign for a System Account?
+For a standard wallet account that you use to hold SOL, the account's address is its public key. Only the person who holds the corresponding private key can sign transactions to move lamports or use them to pay for transaction fees. This is the most straightforward case: you control your wallet, you sign for it.
 
 ## 1. System Program `createAccount` Instruction
 
@@ -66,6 +79,11 @@ If analyzing raw JSON, check `meta.innerInstructions`. A common pattern is an in
 
 Most custom programs use PDAs for their accounts. For example, a Metaplex NFT Metadata account is a PDA derived from the mint address and the metadata program's ID – the metadata program CPIs to system create that PDA. Similarly, an Anchor program uses PDAs for any `init` accounts. The benefit is that the address can be derived by clients and the program, without needing the client to supply a new keypair. PDAs are recommended for on-chain derived accounts over using `createAccountWithSeed` from the client side, since the program can enforce access control for creation and use the seeds internally.
 
+#### Who Can Sign for a PDA?
+A PDA has **no private key**, so it cannot be signed for in the traditional sense by a user or an external wallet. This is a core security feature.
+
+Instead, the **program from which the PDA was derived is the only entity that can "sign" on its behalf**. It does this through a special instruction (`invoke_signed`). The program provides the original seeds used to create the PDA, and the Solana runtime verifies that the PDA was indeed derived from that program. This allows the program to programmatically authorize actions for the accounts it controls, without needing a private key.
+
 ## 4. Associated Token Account Creation (ATA Program)
 
 **Associated Token Accounts** are a specific type of account used to hold SPL tokens. Each wallet address can have at most one associated token account for each mint (token type), at a deterministic PDA address (derived from the wallet, the token mint, and the Associated Token program's ID). To simplify token account management, Solana provides the **Associated Token Account Program** (program ID: `ATokenGPvbd...knL`) which handles creating these accounts.
@@ -83,6 +101,13 @@ After a successful ATA creation, the new account is fully ready to hold tokens. 
 ### Usage
 
 Almost every token wallet uses associated token accounts. When a user receives a new token for the first time, an ATA is often created (sometimes implicitly by the sender). Wallet interfaces or dApps will call this program to create the account so that tokens can be deposited. As an engineer parsing transactions, if you see a call to the ATA program, you can infer a new token holding account was being created. The key indicator is the ATA program ID in the instruction, and inner instructions doing a system create (owner = Token program).
+
+#### Who Can Sign for a Token Account?
+This is where the distinction between owner and authority is crucial.
+- **Owner**: The **Token Program** owns the account. It is the only program that can change the account's data (e.g., the token balance).
+- **Authority**: The **user's wallet** is set as the authority. To transfer tokens, the user must sign the transaction with their private key. The Token Program verifies this signature before executing the transfer.
+
+So, to send USDC from your wallet, you sign the transaction, proving you are the authority. The Token Program sees the valid signature and then subtracts the USDC from your account and adds it to the destination.
 
 ## 5. Manual Creation of SPL Token Accounts (Token Program)
 
@@ -125,6 +150,13 @@ In a transaction, you will see a `programId: 11111111111111111111111111111111` c
 
 A concrete example: The Solana CLI `solana create-stake-account` does exactly this under the hood. The transaction's instructions might be labeled "System Program: Create Account" and "Stake Program: Initialize (stake)" in a block explorer.
 
+#### Who Can Sign for a Stake Account?
+Stake accounts have two separate authorities, which provides a layer of security:
+- **Staker Authority**: This authority is required to sign for any staking-related actions, such as delegating the stake to a validator or de-activating it.
+- **Withdrawer Authority**: This authority is required to sign for any action that moves SOL out of the stake account, including withdrawing the stake after it has been deactivated or transferring the account's rent-exempt balance.
+
+When a user creates a stake account, they designate the public keys for both authorities. For most individual stakers, it is common practice to set **both the Staker and Withdrawer authority to their main wallet address**.
+
 ### Stake Account Split
 
 In addition to creating a stake account from scratch, Solana allows **splitting** an existing stake account into a new one. This is a special case of account creation: the new stake account is created and immediately funded from an existing stake's lamports. The mechanism is: you (the stake authority) provide a fresh account (either by creating it with System Program in the same transaction, or specifying a derived address) and call the Stake Program's `Split` instruction. In practice, a split operation typically bundles:
@@ -151,6 +183,13 @@ In the transaction, expect "System Program: Create Account" (with `owner: Vote11
 
 Because vote accounts are usually created by validators via CLI or scripts, you might not frequently parse them in typical dApp transaction flows. But if you do, the hallmark is the owner being the Vote program and the Initialize instruction. Once active, stake accounts from delegators will point to this vote account to delegate stake.
 
+#### Who Can Sign for a Vote Account?
+Similar to stake accounts, vote accounts have distinct authorities:
+- **Vote Authority**: This key is used to sign the actual voting transactions that the validator sends to the network.
+- **Withdrawer Authority**: This authority can change the vote account's commission rate, change the validator identity, and withdraw lamports from the account (above the rent-exempt minimum).
+
+For security, these are often different keys. A "hot" key that is kept online is used as the Vote Authority, while the Withdrawer Authority is a more secure "cold" key.
+
 ## 8. Nonce Accounts (Durable Transaction Nonces)
 
 Solana's System Program also supports **durable transaction nonces**, which require a **Nonce Account**. A nonce account is a system-owned account that stores a one-time nonce value (allowing offline signing or preventing transaction expiration issues). All nonce accounts are simply accounts **owned by the System Program** (owner = `11111111111111111111111111111111`), but with a specific data layout of 80 bytes, including an authority pubkey and the current nonce.
@@ -165,6 +204,11 @@ In a transaction, these could appear as two back-to-back System instructions. Th
 ### Usage
 
 Nonce accounts are used for offline transaction signing or ensuring a transaction can remain valid beyond the usual blockhash timeout. From a parsing standpoint, nonce account creation is less common in everyday app usage, but it appears in workflows involving offline fee paying or wallet custodians. You can spot nonce account operations by the presence of System Program instructions like InitializeNonce, AdvanceNonce, or WithdrawNonce in a transaction. When a nonce account is eventually closed (with WithdrawNonce draining its lamports), it becomes a normal system account again with 0 data and can be deleted.
+
+#### Who Can Sign for a Nonce Account?
+A nonce account is controlled by a single **Nonce Authority**. This authority is specified when the nonce account is initialized. Only the designated authority can sign transactions to:
+- **Advance the nonce**: Use the nonce for a transaction, which causes it to be replaced by a new blockhash.
+- **Withdraw from the account**: Transfer the lamports out of the nonce account, effectively closing it.
 
 ## 9. Program Deployments (BPF Program Accounts)
 
@@ -205,6 +249,26 @@ Every method above ultimately relies on the System Program to allocate new accou
 - **Transfer to new address**: As noted earlier, a pure System Transfer to a new address will create a system account implicitly. So if you see a transfer instruction where the destination had no prior account (and the transaction didn't explicitly create it), that destination account will be created as a system account with the transferred lamports. The explorer or RPC might not call it out as a "create" event, but the account's existence post-tx (and 0 pre-balance) is the evidence.
 
 By combining these clues with the instruction data, you can detect every instance of account creation in Solana transactions. Whether it's a user wallet being created by an airdrop, a new token account for an SPL token, or a complex on-chain PDA initialization, the fingerprint in the transaction record will include the System Program doing an allocation of lamports and space for a fresh account. Keep an eye on those and the subsequent owner assignments, and you'll successfully identify all account creation techniques on Solana.
+
+## Who Can Sign? A Summary of Authorities
+
+To clarify who needs to sign for common operations, here is a summary for the account types a regular user will most often encounter. In Solana, every transaction must be signed by at least one account, which pays the transaction fees. For actions involving specific accounts, an additional signature from the account's designated *authority* is required.
+
+-   **System Account (Your main SOL wallet)**
+    -   **Action**: Sending SOL, creating new accounts, interacting with most programs.
+    -   **Who Signs?**: The private key of the wallet itself. If you send SOL from your Phantom wallet, Phantom signs the transaction using your private key.
+
+-   **Token Account (Holds your SPL Tokens like USDC, BONK, etc.)**
+    -   **Action**: Sending tokens to another wallet, approving a token transfer.
+    -   **Who Signs?**: The designated **authority** of the token account. This is almost always your main SOL wallet address. When a dApp asks for permission to move your tokens, you are signing a transaction that proves to the Token Program that you, the authority, approve the action.
+
+-   **Stake Account (For staking SOL)**
+    -   **Action**: Delegating stake to a validator, withdrawing stake, or splitting the account.
+    -   **Who Signs?**: The designated **Staker** or **Withdrawer** authority for the account. When you create a stake account, you define these authorities. For most users, both are set to their main wallet address. To delegate your stake, your wallet must sign the transaction as the authorized "Staker."
+
+-   **Program Derived Address (PDA)**
+    -   **Action**: Varies depending on the program.
+    -   **Who Signs?**: PDAs have no private key and **cannot sign for themselves**. Instead, the program that owns the PDA can "sign" on its behalf in a transaction through a process called Cross-Program Invocation (`invoke_signed`). This is an advanced feature used by developers.
 
 ## Sources
 
