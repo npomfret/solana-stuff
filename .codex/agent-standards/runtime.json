@@ -1,7 +1,8 @@
 {
   "plugins": {
     "task-files@npomfret": ".codex/agent-standards/plugins/task-files",
-    "webstorm@npomfret": ".codex/agent-standards/plugins/webstorm"
+    "webstorm@npomfret": ".codex/agent-standards/plugins/webstorm",
+    "workflow@npomfret": ".codex/agent-standards/plugins/workflow"
   },
   "hooks": {
     "webstorm@npomfret": {
