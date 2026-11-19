@@ -33,7 +33,7 @@
     },
     ".codex/agent-standards/plugins/workflow/.claude-plugin/plugin.json": {
       "source": "plugin:workflow@npomfret/.claude-plugin/plugin.json",
-      "sha256": "ce4524704a139e68a27b7aa955663bec96f8f7c8d4e13e0df75e5455bbbbf6cd",
+      "sha256": "d2ffea53be1886c0ae4a9ef92fecb39ef2179a5763f1dcd0bd9b896345a4d17d",
       "link": false,
       "executable": false
     },
@@ -45,13 +45,13 @@
     },
     ".codex/agent-standards/plugins/workflow/skills/git-delivery/SKILL.md": {
       "source": "plugin:workflow@npomfret/skills/git-delivery/SKILL.md",
-      "sha256": "4d0be736df9915f709336d7656e92705d719e4d00e85b6f5d0d070298b2d47b4",
+      "sha256": "bc99ce906c1e8dcae57415b372b46d77525b03dd0cb2eec9cbf82f1e39e063fa",
       "link": false,
       "executable": false
     },
     ".codex/agent-standards/plugins/workflow/skills/review-changes/SKILL.md": {
       "source": "plugin:workflow@npomfret/skills/review-changes/SKILL.md",
-      "sha256": "2df79ee2722f7fb3d575824c2f83fe625df6c43e2cbd2656b29c4a2a254e9a01",
+      "sha256": "a52237ef3bda84c03645be6a36636b38af2eaf1ab0bd9d76845fc639cc5a7b57",
       "link": false,
       "executable": false
     },
@@ -69,19 +69,19 @@
     },
     ".codex/agents/change-reviewer.toml": {
       "source": "plugin:workflow@npomfret/agents/change-reviewer.md",
-      "sha256": "cfa43053fb80ddb8dedb1046f86474956446748e831581ae62bd1ebbd1954683",
+      "sha256": "dc241903cacdf1b58c9638a724694bf3c1df047b7c05d684280f030515080b25",
       "link": false,
       "executable": false
     },
     ".codex/hooks.json": {
       "source": "templates/codex-hooks.py",
-      "sha256": "db7dcee91fd934d394316ba3b398e029999e4cf05436daae6a774e2e9b3488d8",
+      "sha256": "d7a50f08f65a0191d29e013f7d1ec11bb1b2a4e0e0beb283b7dc7f5b33484909",
       "link": false,
       "executable": false
     },
     ".codex/hooks/agent_standards.py": {
       "source": "templates/codex-hooks.py",
-      "sha256": "f22799ef7fe198899a656c83c33a0c99fe2efb0be91426f09b170ed7e8b2456e",
+      "sha256": "8e68033b340cf77ed5d105e610a0b8d5afbfb30752a04a67222f6f5abb74c8f3",
       "link": false,
       "executable": false
     },
