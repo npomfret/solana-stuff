@@ -3,13 +3,13 @@
   "files": {
     ".codex/agent-standards/plugins/task-files/.claude-plugin/plugin.json": {
       "source": "plugin:task-files@npomfret/.claude-plugin/plugin.json",
-      "sha256": "3e38660f2ee7f2a2726592731d81f9532bc98564206fd9d26e1d5249429e748f",
+      "sha256": "92a578e5a0a76366c53c82eb044764f44d0173a8dff32a0b1043c486718a3652",
       "link": false,
       "executable": false
     },
     ".codex/agent-standards/plugins/task-files/skills/task-files/SKILL.md": {
       "source": "plugin:task-files@npomfret/skills/task-files/SKILL.md",
-      "sha256": "7d102b6dc2093fc2699234583973ef01060940eb8fb14873be830cb2b16b1580",
+      "sha256": "ab81025a80c27ded6e6493004f4aeb3e79b147d192c8b6f33cd705b070cf375e",
       "link": false,
       "executable": false
     },
@@ -33,7 +33,7 @@
     },
     ".codex/agent-standards/plugins/workflow/.claude-plugin/plugin.json": {
       "source": "plugin:workflow@npomfret/.claude-plugin/plugin.json",
-      "sha256": "5a3e43e5562698562ce7115b831c5ace74fe3afb93f67056bef6c476c807165c",
+      "sha256": "e4681fa752b960b2b9ebfd439c4dd7c14d70c2995c17d9155a1d06c3817b6c8f",
       "link": false,
       "executable": false
     },
@@ -45,19 +45,19 @@
     },
     ".codex/agent-standards/plugins/workflow/skills/git-delivery/SKILL.md": {
       "source": "plugin:workflow@npomfret/skills/git-delivery/SKILL.md",
-      "sha256": "44ae644ed203969afbd5822402bc17a6e30b6ea3f93e63db1a757034510048ee",
+      "sha256": "4d4b51c0aa2798b7e0c40075d6dc6e1ef6f2822bba9671dcb6ca7eeaeb351317",
       "link": false,
       "executable": false
     },
     ".codex/agent-standards/plugins/workflow/skills/review-changes/SKILL.md": {
       "source": "plugin:workflow@npomfret/skills/review-changes/SKILL.md",
-      "sha256": "a52237ef3bda84c03645be6a36636b38af2eaf1ab0bd9d76845fc639cc5a7b57",
+      "sha256": "21e1e8ca947a49c8d81051d23a23b278a3510ca5372442cd9fa70651c06fd012",
       "link": false,
       "executable": false
     },
     ".codex/agent-standards/plugins/workflow/skills/verification-gates/SKILL.md": {
       "source": "plugin:workflow@npomfret/skills/verification-gates/SKILL.md",
-      "sha256": "63efb4ffd3b45f7945fa5aa2e4814b5e047279833af9ff8857b45d07ce0a4858",
+      "sha256": "fb96e545366109bfdff5e3892fa441f447461331bdf2a3555939501981a2903f",
       "link": false,
       "executable": false
     },
@@ -69,13 +69,13 @@
     },
     ".codex/agents/change-reviewer.toml": {
       "source": "plugin:workflow@npomfret/agents/change-reviewer.md",
-      "sha256": "dc241903cacdf1b58c9638a724694bf3c1df047b7c05d684280f030515080b25",
+      "sha256": "6827a6742a4c1c792ce5309880001f68bd40499ca5082fa122c0cef84a46c53a",
       "link": false,
       "executable": false
     },
     ".codex/hooks.json": {
       "source": "templates/codex-hooks.py",
-      "sha256": "9aa2b02ba3be26c5e2954e70b070d25be5ba301eb9b11b97bbe2ddc8d887daee",
+      "sha256": "c0f36427503e28bc62fe2cbf23658b63acb5705c87e64c1869c173ff0962adca",
       "link": false,
       "executable": false
     },
