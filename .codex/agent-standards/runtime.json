@@ -1,0 +1,23 @@
+{
+  "plugins": {
+    "task-files@npomfret": ".codex/agent-standards/plugins/task-files",
+    "webstorm@npomfret": ".codex/agent-standards/plugins/webstorm"
+  },
+  "hooks": {
+    "webstorm@npomfret": {
+      "SessionStart": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session_context.py\"",
+              "timeout": 10
+            }
+          ]
+        }
+      ]
+    },
+    "project": {}
+  },
+  "rules": []
+}
